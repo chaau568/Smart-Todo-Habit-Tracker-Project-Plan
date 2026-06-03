@@ -1,47 +1,44 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
 
 from categories.models import Category
-from categories.serializers.category_serializers import CategorySerializer
+from categories.serializers import CategorySerializer
 from categories.services import CategoryService
 
 
-class CategoryViewSet(ModelViewSet):
-    serializer_class = CategorySerializer
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def category_list(request):
+    if request.method == "GET":
+        categories = Category.objects.filter(user=request.user).order_by("-created_at")
+        serializer = CategorySerializer(categories, many=True)
+        return Response({"success": True, "data": {"results": serializer.data, "count": categories.count()}})
 
-    def get_queryset(self):
-        return Category.objects.filter(user=self.request.user)
+    serializer = CategorySerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    category = CategoryService.create_category(request.user, serializer.validated_data)
+    return Response(
+        {"success": True, "data": CategorySerializer(category).data, "message": "Category created."},
+        status=status.HTTP_201_CREATED,
+    )
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        category = CategoryService.create_category(request.user, serializer.validated_data)
-        return Response(
-            {
-                'success': True,
-                'data': self.get_serializer(category).data,
-                'message': 'Category created.',
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
-    def list(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_queryset(), many=True)
-        return Response({'success': True, 'data': serializer.data})
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def category_detail(request, category_id):
+    category = get_object_or_404(Category, id=category_id, user=request.user)
 
-    def retrieve(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_object())
-        return Response({'success': True, 'data': serializer.data})
+    if request.method == "GET":
+        return Response({"success": True, "data": CategorySerializer(category).data})
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'success': True, 'data': serializer.data})
+    if request.method == "DELETE":
+        category.delete()
+        return Response({"success": True, "data": None, "message": "Category deleted."})
 
-    def destroy(self, request, *args, **kwargs):
-        self.get_object().delete()
-        return Response({'success': True, 'message': 'Category deleted.'}, status=status.HTTP_200_OK)
+    serializer = CategorySerializer(category, data=request.data, partial=True, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"success": True, "data": CategorySerializer(category).data, "message": "Category updated."})
