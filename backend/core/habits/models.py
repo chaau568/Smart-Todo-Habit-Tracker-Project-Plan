@@ -19,7 +19,7 @@ class Habit(models.Model):
     )
     category = models.ForeignKey(
         "categories.Category",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="habits",
         null=True,
         blank=True,

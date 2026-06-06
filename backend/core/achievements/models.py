@@ -34,6 +34,10 @@ class Achievement(models.Model):
     def __str__(self):
         return self.title
 
+    def soft_delete(self):
+        self.is_active = False
+        self.save()
+
 
 class UserAchievement(models.Model):
     user = models.ForeignKey(
@@ -43,7 +47,7 @@ class UserAchievement(models.Model):
     )
     achievement = models.ForeignKey(
         Achievement,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="user_achievements",
     )
     unlocked_at = models.DateTimeField(default=timezone.now)

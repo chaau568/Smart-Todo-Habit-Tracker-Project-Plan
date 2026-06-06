@@ -19,7 +19,7 @@ class Task(models.Model):
     )
     category = models.ForeignKey(
         "categories.Category",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="tasks",
         null=True,
         blank=True,

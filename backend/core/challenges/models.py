@@ -11,7 +11,7 @@ class Challenge(models.Model):
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="owned_challenges",
     )
     title = models.CharField(max_length=255)
@@ -42,7 +42,7 @@ class Challenge(models.Model):
 class ChallengeParticipant(models.Model):
     challenge = models.ForeignKey(
         Challenge,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="participants",
     )
     user = models.ForeignKey(

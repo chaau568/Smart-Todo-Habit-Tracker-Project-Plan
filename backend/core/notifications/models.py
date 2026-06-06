@@ -16,14 +16,14 @@ class Notification(models.Model):
     )
     task = models.ForeignKey(
         "tasks.Task",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="notifications",
         null=True,
         blank=True,
     )
     habit = models.ForeignKey(
         "habits.Habit",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="notifications",
         null=True,
         blank=True,
