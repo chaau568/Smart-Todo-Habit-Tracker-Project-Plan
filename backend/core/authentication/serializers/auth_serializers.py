@@ -17,9 +17,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    current_password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ["username", "email"]
+        fields = ["username", "email", "current_password"]
 
     def validate_email(self, value):
         normalized = value.lower()
@@ -38,9 +40,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This username is already taken.")
         return value
 
+    def validate(self, attrs):
+        password = attrs.pop("current_password")
+        if not self.instance.check_password(password):
+            raise serializers.ValidationError({"current_password": "Password is incorrect."})
+        return attrs
+
 
 class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(write_only=True)
+    current_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True, min_length=8)
     confirm_new_password = serializers.CharField(write_only=True)
 

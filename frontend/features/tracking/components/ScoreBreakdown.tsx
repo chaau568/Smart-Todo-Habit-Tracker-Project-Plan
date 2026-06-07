@@ -45,7 +45,7 @@ export function ScoreBreakdown({ breakdown }: Props) {
           label="Task completion"
           value={breakdown.task_rate}
           weight="0.4"
-          color="#7B9E87"
+          color="#16A34A"
         />
         <BreakdownBar
           label="Habit completion"

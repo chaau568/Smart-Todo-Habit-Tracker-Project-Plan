@@ -102,9 +102,9 @@ def change_password(request):
     serializer = ChangePasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    if not request.user.check_password(serializer.validated_data["old_password"]):
+    if not request.user.check_password(serializer.validated_data["current_password"]):
         return Response(
-            {"success": False, "error": {"code": "WRONG_PASSWORD", "message": "Old password is incorrect."}},
+            {"success": False, "error": {"code": "WRONG_PASSWORD", "message": "Current password is incorrect."}},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

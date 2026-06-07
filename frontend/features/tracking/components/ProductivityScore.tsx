@@ -3,15 +3,15 @@ interface Props {
 }
 
 function scoreLabel(score: number): { text: string; color: string } {
-  if (score >= 80) return { text: "Excellent", color: "#4A7C59" }
-  if (score >= 60) return { text: "Good progress", color: "#7B9E87" }
+  if (score >= 80) return { text: "Excellent", color: "#166534" }
+  if (score >= 60) return { text: "Good progress", color: "#16A34A" }
   if (score >= 40) return { text: "Getting there", color: "#C17F3B" }
   return { text: "Needs work", color: "#C55151" }
 }
 
 function scoreColor(score: number): string {
-  if (score >= 80) return "#4A7C59"
-  if (score >= 60) return "#7B9E87"
+  if (score >= 80) return "#166534"
+  if (score >= 60) return "#16A34A"
   if (score >= 40) return "#C17F3B"
   return "#C55151"
 }

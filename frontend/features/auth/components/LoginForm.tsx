@@ -48,7 +48,7 @@ export function LoginForm() {
         {/* Logo */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-7 h-7 rounded-lg bg-[#7B9E87] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center">
               <span className="text-white text-xs font-semibold">S</span>
             </div>
             <span className="text-sm font-medium text-[#9C8F87]">Smart Todo</span>
@@ -59,8 +59,8 @@ export function LoginForm() {
 
         {/* Success message after register */}
         {justRegistered && (
-          <div className="mb-4 rounded-lg bg-[#EDF2EE] border border-[#7B9E87]/30 px-4 py-3">
-            <p className="text-sm text-[#4A7C59]">Account created! Please sign in.</p>
+          <div className="mb-4 rounded-lg bg-[#DCFCE7] border border-[#16A34A]/20 px-4 py-3">
+            <p className="text-sm text-[#166534]">Account created! Please sign in.</p>
           </div>
         )}
 
@@ -121,7 +121,7 @@ export function LoginForm() {
           <Button
             type="submit"
             disabled={isPending || !identifier || !password}
-            className="w-full bg-[#7B9E87] hover:bg-[#6A8E77] text-white font-medium h-10 rounded-xl mt-2"
+            className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-medium h-10 rounded-xl mt-2"
           >
             {isPending ? (
               <span className="flex items-center gap-2">
@@ -134,12 +134,12 @@ export function LoginForm() {
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-[#F5F0EB] text-center">
+        <div className="mt-6 pt-6 border-t border-[#E8E0D7] text-center">
           <p className="text-sm text-[#9C8F87]">
             Don&apos;t have an account?{" "}
             <Link
               href="/register"
-              className="text-[#7B9E87] font-medium hover:text-[#6A8E77] transition-colors"
+              className="text-[#16A34A] font-medium hover:text-[#15803D] transition-colors"
             >
               Create one
             </Link>

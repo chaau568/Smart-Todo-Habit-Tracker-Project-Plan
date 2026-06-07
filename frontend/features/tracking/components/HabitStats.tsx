@@ -30,7 +30,7 @@ export function HabitStats({ habits }: Props) {
             {habits.total}
           </p>
         </div>
-        <span className="text-xs font-medium text-[#7B9E87] bg-[#EDF2EE] px-2.5 py-1 rounded-full">
+        <span className="text-xs font-medium text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded-full">
           {habits.completion_rate}% done
         </span>
       </div>

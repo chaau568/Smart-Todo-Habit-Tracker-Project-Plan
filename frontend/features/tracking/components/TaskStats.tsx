@@ -34,13 +34,13 @@ export function TaskStats({ tasks }: Props) {
             {tasks.total}
           </p>
         </div>
-        <span className="text-xs font-medium text-[#7B9E87] bg-[#EDF2EE] px-2.5 py-1 rounded-full">
+        <span className="text-xs font-medium text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded-full">
           {tasks.completion_rate}% done
         </span>
       </div>
 
       <div className="space-y-3 mb-5">
-        <StatRow label="Completed" value={tasks.succeeded} dot="#4A7C59" />
+        <StatRow label="Completed" value={tasks.succeeded} dot="#166534" />
         <StatRow label="In progress" value={tasks.in_progress} dot="#4A6FA5" />
         <StatRow label="Pending" value={tasks.pending} dot="#C17F3B" />
         <StatRow label="Failed" value={tasks.failed} dot="#C55151" />
@@ -48,7 +48,7 @@ export function TaskStats({ tasks }: Props) {
 
       <div className="h-1.5 bg-[#E8E0D7] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#7B9E87] rounded-full transition-all duration-700"
+          className="h-full bg-[#16A34A] rounded-full transition-all duration-700"
           style={{ width: `${tasks.completion_rate}%` }}
         />
       </div>

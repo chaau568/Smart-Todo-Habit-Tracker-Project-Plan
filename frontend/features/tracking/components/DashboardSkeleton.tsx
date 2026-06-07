@@ -24,12 +24,12 @@ function ScoreSkeleton() {
 
 export function DashboardSkeleton() {
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+      <div className="mb-6 sm:mb-8">
         <div className="h-7 w-36 bg-[#E8E0D7] rounded animate-pulse mb-2" />
         <div className="h-4 w-48 bg-[#E8E0D7] rounded animate-pulse" />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <ScoreSkeleton />
         <SkeletonCard />
         <SkeletonCard />

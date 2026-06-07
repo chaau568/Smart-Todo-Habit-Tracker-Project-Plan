@@ -69,7 +69,7 @@ export function RegisterForm() {
         {/* Logo */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-7 h-7 rounded-lg bg-[#7B9E87] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center">
               <span className="text-white text-xs font-semibold">S</span>
             </div>
             <span className="text-sm font-medium text-[#9C8F87]">Smart Todo</span>
@@ -161,7 +161,7 @@ export function RegisterForm() {
                     <li
                       key={rule.label}
                       className={`flex items-center gap-1.5 text-xs transition-colors ${
-                        met ? "text-[#4A7C59]" : "text-[#9C8F87]"
+                        met ? "text-[#166534]" : "text-[#9C8F87]"
                       }`}
                     >
                       {met ? <CheckIcon /> : <DotIcon />}
@@ -209,7 +209,7 @@ export function RegisterForm() {
           <Button
             type="submit"
             disabled={isPending || !canSubmit}
-            className="w-full bg-[#7B9E87] hover:bg-[#6A8E77] text-white font-medium h-10 rounded-xl mt-2"
+            className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-medium h-10 rounded-xl mt-2"
           >
             {isPending ? (
               <span className="flex items-center gap-2">
@@ -222,12 +222,12 @@ export function RegisterForm() {
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-[#F5F0EB] text-center">
+        <div className="mt-6 pt-6 border-t border-[#E8E0D7] text-center">
           <p className="text-sm text-[#9C8F87]">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-[#7B9E87] font-medium hover:text-[#6A8E77] transition-colors"
+              className="text-[#16A34A] font-medium hover:text-[#15803D] transition-colors"
             >
               Sign in
             </Link>
