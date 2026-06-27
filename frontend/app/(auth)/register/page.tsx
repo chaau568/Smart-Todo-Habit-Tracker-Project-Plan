@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { RegisterForm } from "@/features/auth/components/RegisterForm"
 
 export const metadata: Metadata = {
-  title: "Create account — Smart Todo",
+  title: "Smart Todo",
 }
 
 export default function RegisterPage() {

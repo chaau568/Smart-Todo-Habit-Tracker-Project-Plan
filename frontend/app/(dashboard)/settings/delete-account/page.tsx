@@ -3,7 +3,7 @@ import Link from "next/link"
 import { DeleteAccountSection } from "@/features/settings/components/DeleteAccountSection"
 
 export const metadata: Metadata = {
-  title: "Delete Account — Smart Todo",
+  title: "Smart Todo",
 }
 
 export default function DeleteAccountPage() {

@@ -3,7 +3,7 @@ import Link from "next/link"
 import { ChangeUsernameForm } from "@/features/settings/components/ChangeUsernameForm"
 
 export const metadata: Metadata = {
-  title: "Change Username — Smart Todo",
+  title: "Smart Todo",
 }
 
 export default function ChangeUsernamePage() {

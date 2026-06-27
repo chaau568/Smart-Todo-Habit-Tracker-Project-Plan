@@ -3,7 +3,7 @@ import Link from "next/link"
 import { ChangePasswordForm } from "@/features/settings/components/ChangePasswordForm"
 
 export const metadata: Metadata = {
-  title: "Change Password — Smart Todo",
+  title: "Smart Todo",
 }
 
 export default function ChangePasswordPage() {

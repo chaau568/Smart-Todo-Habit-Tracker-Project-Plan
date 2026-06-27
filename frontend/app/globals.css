@@ -115,3 +115,24 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  /* Dropdown menu — closed state: ease-out used when CLOSING (CSS uses destination style's timing) */
+  .dropdown-menu {
+    transform-origin: top right;
+    opacity: 0;
+    scale: 0.95;
+    pointer-events: none;
+    transition: opacity 150ms cubic-bezier(0, 0, 0.2, 1),
+                scale 150ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  /* Open state: ease-in used when OPENING */
+  .dropdown-menu.is-open {
+    opacity: 1;
+    scale: 1;
+    pointer-events: auto;
+    transition: opacity 150ms cubic-bezier(0.4, 0, 1, 1),
+                scale 150ms cubic-bezier(0.4, 0, 1, 1);
+  }
+}

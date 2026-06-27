@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { auth } from "@/utils/auth"
 import { useSidebar } from "./SidebarContext"
+import { useUnreadCount } from "@/features/notifications/hooks/useNotifications"
 
 const NAV_ITEMS = [
   { label: "Dashboard",     href: "/dashboard",      icon: DashboardIcon },
@@ -11,7 +13,7 @@ const NAV_ITEMS = [
   { label: "Habits",        href: "/habits",          icon: HabitsIcon },
   { label: "Achievements",  href: "/achievements",    icon: AchievementsIcon },
   { label: "Challenges",    href: "/challenges",      icon: ChallengesIcon },
-  { label: "Notifications", href: "/notifications",   icon: NotificationsIcon },
+  { label: "Notifications", href: "/notifications",   icon: NotificationsIcon, badge: true },
   { label: "Settings",      href: "/settings",        icon: SettingsIcon },
 ]
 
@@ -19,6 +21,8 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { isCollapsed, toggle, closeMobile } = useSidebar()
+  const { data: unreadCount = 0 } = useUnreadCount()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const handleLogout = () => {
     auth.clearTokens()
@@ -63,6 +67,7 @@ export function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
           const Icon = item.icon
+          const showBadge = item.badge && unreadCount > 0
           return (
             <Link
               key={item.href}
@@ -77,8 +82,20 @@ export function Sidebar() {
                   : "text-[#9C8F87] hover:text-[#2A2522] hover:bg-white/70"
               }`}
             >
-              <Icon className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span className="truncate">{item.label}</span>}
+              <div className="relative shrink-0">
+                <Icon className="w-4 h-4" />
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#C55151] rounded-full text-white flex items-center justify-center" style={{ fontSize: "8px", lineHeight: 1 }}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+              {!isCollapsed && showBadge && (
+                <span className="text-xs font-semibold bg-[#C55151] text-white px-1.5 py-0.5 rounded-full leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -87,7 +104,7 @@ export function Sidebar() {
       {/* Sign out */}
       <div className="p-2 border-t border-[#E8E0D7]">
         <button
-          onClick={handleLogout}
+          onClick={() => setConfirmOpen(true)}
           title={isCollapsed ? "Sign out" : undefined}
           className={`w-full flex items-center gap-3 rounded-xl text-sm text-[#9C8F87] hover:text-[#C55151] hover:bg-red-50/80 transition-colors ${
             isCollapsed ? "px-0 py-2.5 justify-center" : "px-3 py-2.5"
@@ -97,6 +114,13 @@ export function Sidebar() {
           {!isCollapsed && <span>Sign out</span>}
         </button>
       </div>
+
+      {confirmOpen && (
+        <LogoutConfirmDialog
+          onConfirm={handleLogout}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </aside>
   )
 }
@@ -119,6 +143,8 @@ export function MobileSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { isMobileOpen, closeMobile } = useSidebar()
+  const { data: unreadCount = 0 } = useUnreadCount()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const handleLogout = () => {
     auth.clearTokens()
@@ -151,6 +177,7 @@ export function MobileSidebar() {
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
           const Icon = item.icon
+          const showBadge = item.badge && unreadCount > 0
           return (
             <Link
               key={item.href}
@@ -163,7 +190,12 @@ export function MobileSidebar() {
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {showBadge && (
+                <span className="text-xs font-semibold bg-[#C55151] text-white px-1.5 py-0.5 rounded-full leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -171,14 +203,64 @@ export function MobileSidebar() {
 
       <div className="p-3 border-t border-[#E8E0D7]">
         <button
-          onClick={handleLogout}
+          onClick={() => setConfirmOpen(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#9C8F87] hover:text-[#C55151] hover:bg-red-50/80 transition-colors"
         >
           <SignOutIcon className="w-4 h-4 shrink-0" />
           <span>Sign out</span>
         </button>
       </div>
+
+      {confirmOpen && (
+        <LogoutConfirmDialog
+          onConfirm={handleLogout}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </aside>
+  )
+}
+
+// ─── Logout confirm dialog ───────────────────────────────────────────────────
+
+function LogoutConfirmDialog({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40"
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div className="bg-white rounded-2xl border border-[#E8E0D7] w-full max-w-xs shadow-xl p-6">
+        <div className="flex items-center justify-center w-11 h-11 rounded-full bg-red-50 mx-auto mb-4">
+          <SignOutIcon className="w-5 h-5 text-[#C55151]" />
+        </div>
+        <h3 className="text-base font-semibold text-[#2A2522] text-center mb-1">
+          ออกจากระบบ?
+        </h3>
+        <p className="text-sm text-[#9C8F87] text-center mb-6">
+          คุณต้องการออกจากระบบใช่หรือไม่
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 h-10 rounded-xl text-sm font-medium bg-gray-100 text-[#2A2522] hover:bg-gray-200 transition-colors"
+          >
+            ออก
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 h-10 rounded-xl text-sm font-medium bg-[#C55151] text-white hover:bg-[#b34343] transition-colors"
+          >
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

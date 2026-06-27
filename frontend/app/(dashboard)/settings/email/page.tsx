@@ -3,7 +3,7 @@ import Link from "next/link"
 import { ChangeEmailForm } from "@/features/settings/components/ChangeEmailForm"
 
 export const metadata: Metadata = {
-  title: "Change Email — Smart Todo",
+  title: "Smart Todo",
 }
 
 export default function ChangeEmailPage() {
