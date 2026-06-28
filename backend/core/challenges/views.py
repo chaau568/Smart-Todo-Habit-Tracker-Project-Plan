@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.utils import paginate
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.serializers import ChallengeParticipantSerializer, ChallengeSerializer
 
@@ -12,9 +13,10 @@ from challenges.serializers import ChallengeParticipantSerializer, ChallengeSeri
 @permission_classes([IsAuthenticated])
 def challenge_list(request):
     if request.method == "GET":
-        challenges = Challenge.objects.filter(is_active=True).order_by("-created_at")
-        serializer = ChallengeSerializer(challenges, many=True)
-        return Response({"success": True, "data": {"results": serializer.data, "count": challenges.count()}})
+        qs = Challenge.objects.filter(is_active=True).order_by("-created_at")
+        items, meta = paginate(qs, request)
+        serializer = ChallengeSerializer(items, many=True)
+        return Response({"success": True, "data": {**meta, "results": serializer.data}})
 
     serializer = ChallengeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

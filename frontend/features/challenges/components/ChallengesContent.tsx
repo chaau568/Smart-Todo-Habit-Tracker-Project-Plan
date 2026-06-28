@@ -8,6 +8,8 @@ import {
   useJoinChallenge,
   useLeaveChallenge,
 } from "../hooks/useChallenges"
+import { Pagination } from "@/components/Pagination"
+import type { PageSize } from "@/components/Pagination"
 import { ChallengeForm } from "./ChallengeForm"
 import { ChallengeLeaderboard } from "./ChallengeLeaderboard"
 import type { Challenge, ChallengeCreatePayload, ChallengeType } from "../types/challenge.types"
@@ -108,14 +110,27 @@ function ChallengeCard({
 }
 
 export function ChallengesContent() {
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSize>(10)
   const [formOpen, setFormOpen] = useState(false)
   const [leaderboardChallenge, setLeaderboardChallenge] = useState<Challenge | null>(null)
 
-  const { data: challenges = [], isLoading, isError, refetch } = useChallenges()
+  const params = { page, pageSize }
+
+  const { data, isLoading, isError, refetch } = useChallenges(params)
+  const challenges = data?.results ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalCount = data?.count ?? 0
+
   const { mutateAsync: createChallenge } = useCreateChallenge()
   const { mutate: deleteChallenge, variables: deletingId } = useDeleteChallenge()
   const { mutate: joinChallenge, variables: joiningId } = useJoinChallenge()
   const { mutate: leaveChallenge, variables: leavingId } = useLeaveChallenge()
+
+  const handlePageSizeChange = (size: PageSize) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const handleSave = async (payload: ChallengeCreatePayload) => {
     await createChallenge(payload)
@@ -145,7 +160,7 @@ export function ChallengesContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2A2522]">Challenges</h1>
-          {!isLoading && <p className="text-sm text-[#9C8F87] mt-0.5">{challenges.length} active</p>}
+          {!isLoading && <p className="text-sm text-[#9C8F87] mt-0.5">{totalCount} active</p>}
         </div>
         <button
           onClick={() => setFormOpen(true)}
@@ -186,6 +201,16 @@ export function ChallengesContent() {
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {formOpen && (
         <ChallengeForm onSave={handleSave} onClose={() => setFormOpen(false)} />

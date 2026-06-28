@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { Habit, HabitStatus } from "../types/habit.types"
+import type { Habit } from "../types/habit.types"
 
 interface HabitCardProps {
   habit: Habit
@@ -13,22 +13,10 @@ interface HabitCardProps {
   isLoading?: boolean
 }
 
-const STATUS_STYLES: Record<HabitStatus, string> = {
-  PENDING:     "bg-amber-50 text-amber-700 border border-amber-200",
-  IN_PROGRESS: "bg-blue-50 text-blue-700 border border-blue-200",
-  SUCCEEDED:   "bg-[#DCFCE7] text-[#166534] border border-green-200",
-  FAILED:      "bg-red-50 text-[#C55151] border border-red-100",
-  SKIPPED:     "bg-purple-50 text-purple-700 border border-purple-100",
-  DELETED:     "bg-gray-50 text-[#9C8F87] border border-gray-200",
-}
-
-const STATUS_LABELS: Record<HabitStatus, string> = {
-  PENDING:     "Pending",
-  IN_PROGRESS: "In Progress",
-  SUCCEEDED:   "Succeeded",
-  FAILED:      "Failed",
-  SKIPPED:     "Skipped",
-  DELETED:     "Deleted",
+const DAILY_BADGE = {
+  checked_in: { label: "Checked In ✓", style: "bg-[#DCFCE7] text-[#166534] border border-green-200" },
+  skipped:    { label: "Skipped",       style: "bg-purple-50 text-purple-700 border border-purple-100" },
+  pending:    { label: "Pending",        style: "bg-amber-50 text-amber-700 border border-amber-200" },
 }
 
 function formatDate(dateStr: string) {
@@ -50,16 +38,17 @@ export function HabitCard({
 }: HabitCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const canCheckIn = habit.status !== "SUCCEEDED" && habit.status !== "DELETED"
-  const canSkip = habit.status !== "SUCCEEDED" && habit.status !== "DELETED"
+  const dailyState = habit.checked_in_today ? "checked_in" : habit.skipped_today ? "skipped" : "pending"
+  const badge = DAILY_BADGE[dailyState]
+  const canAct = !habit.checked_in_today && !habit.skipped_today && habit.status !== "DELETED"
 
   return (
     <div className={`bg-white rounded-xl border border-[#E8E0D7] p-4 transition-opacity ${isLoading ? "opacity-60 pointer-events-none" : ""}`}>
       {/* Top row */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[habit.status]}`}>
-            {STATUS_LABELS[habit.status]}
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badge.style}`}>
+            {badge.label}
           </span>
           {habit.category && (
             <span className="text-xs text-[#9C8F87] bg-[#F0FDF4] px-2 py-0.5 rounded-full border border-[#E8E0D7]">
@@ -82,10 +71,7 @@ export function HabitCard({
 
           {menuOpen && (
             <>
-              {/* Backdrop — closes menu on outside click */}
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-
-              {/* Dropdown */}
               <div className="absolute right-0 top-8 z-20 bg-white rounded-xl border border-[#E8E0D7] shadow-lg py-1 w-36 overflow-hidden">
                 <button
                   onClick={() => { setMenuOpen(false); onViewHistory(habit) }}
@@ -126,24 +112,20 @@ export function HabitCard({
       </p>
 
       {/* Action buttons */}
-      {(canCheckIn || canSkip) && (
+      {canAct && (
         <div className="flex gap-2 flex-wrap">
-          {canCheckIn && (
-            <button
-              onClick={() => onCheckIn(habit.id)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#DCFCE7] text-[#166534] hover:bg-[#bbf7d0] transition-colors"
-            >
-              Check in
-            </button>
-          )}
-          {canSkip && (
-            <button
-              onClick={() => onSkip(habit.id)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
-            >
-              Skip
-            </button>
-          )}
+          <button
+            onClick={() => onCheckIn(habit.id)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#DCFCE7] text-[#166534] hover:bg-[#bbf7d0] transition-colors"
+          >
+            Check in
+          </button>
+          <button
+            onClick={() => onSkip(habit.id)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+          >
+            Skip
+          </button>
         </div>
       )}
 

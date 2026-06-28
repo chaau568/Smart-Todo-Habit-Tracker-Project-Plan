@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { taskService } from "../services/task.service"
+import type { TaskListParams } from "../services/task.service"
 import type { TaskCreatePayload, TaskUpdatePayload } from "../types/task.types"
 
-export function useTasks() {
+export function useTasks(params: TaskListParams = {}) {
   return useQuery({
-    queryKey: queryKeys.tasks.all,
-    queryFn: taskService.getAll,
+    queryKey: queryKeys.tasks.list(params),
+    queryFn: () => taskService.getList(params),
   })
 }
 

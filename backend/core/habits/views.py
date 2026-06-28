@@ -1,21 +1,52 @@
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.utils import paginate
 from habits.models import Habit, HabitLog
 from habits.serializers import HabitCreateSerializer, HabitReadSerializer, HabitUpdateSerializer
 from habits.services import HabitService
+
+
+def _annotate_qs(qs):
+    today = timezone.localdate()
+    checked_in_sq = HabitLog.objects.filter(
+        habit=OuterRef("pk"), completed_date=today, action=HabitLog.Action.CHECKED_IN
+    )
+    skipped_sq = HabitLog.objects.filter(
+        habit=OuterRef("pk"), completed_date=today, action=HabitLog.Action.SKIPPED
+    )
+    return qs.annotate(checked_in_today=Exists(checked_in_sq), skipped_today=Exists(skipped_sq))
 
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def habit_list(request):
     if request.method == "GET":
-        habits = Habit.objects.filter(user=request.user).exclude(status=Habit.Status.DELETED).order_by("-created_at")
-        serializer = HabitReadSerializer(habits, many=True)
-        return Response({"success": True, "data": {"results": serializer.data, "count": habits.count()}})
+        qs = Habit.objects.filter(user=request.user, status=Habit.Status.ACTIVE)
+        qs = _annotate_qs(qs)
+
+        daily_status = request.GET.get("daily_status")
+        if daily_status == "checked_in":
+            qs = qs.filter(checked_in_today=True)
+        elif daily_status == "skipped":
+            qs = qs.filter(skipped_today=True)
+        elif daily_status == "pending":
+            qs = qs.filter(checked_in_today=False, skipped_today=False)
+
+        ordering = request.GET.get("ordering", "-created_at")
+        if ordering.lstrip("-") in ("start_date", "end_date", "created_at"):
+            qs = qs.order_by(ordering)
+        else:
+            qs = qs.order_by("-created_at")
+
+        items, meta = paginate(qs, request)
+        serializer = HabitReadSerializer(items, many=True)
+        return Response({"success": True, "data": {**meta, "results": serializer.data}})
 
     serializer = HabitCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
@@ -60,9 +91,11 @@ def habit_check_in(request, habit_id):
             {"success": False, "error": {"code": "NOT_FOUND", "message": "Habit not found."}},
             status=status.HTTP_404_NOT_FOUND,
         )
-    if habit.status == Habit.Status.SUCCEEDED:
+
+    today = timezone.localdate()
+    if HabitLog.objects.filter(habit=habit, completed_date=today).exists():
         return Response(
-            {"success": False, "error": {"code": "ALREADY_CHECKED_IN", "message": "Already checked in for today."}},
+            {"success": False, "error": {"code": "ALREADY_LOGGED_TODAY", "message": "Already logged this habit today."}},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -75,9 +108,16 @@ def habit_check_in(request, habit_id):
 def habit_skip(request, habit_id):
     habit = get_object_or_404(Habit, id=habit_id, user=request.user)
 
-    if habit.status in (Habit.Status.DELETED, Habit.Status.SUCCEEDED):
+    if habit.status == Habit.Status.DELETED:
         return Response(
-            {"success": False, "error": {"code": "INVALID_STATUS", "message": f"Cannot skip a {habit.status} habit."}},
+            {"success": False, "error": {"code": "NOT_FOUND", "message": "Habit not found."}},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    today = timezone.localdate()
+    if HabitLog.objects.filter(habit=habit, completed_date=today).exists():
+        return Response(
+            {"success": False, "error": {"code": "ALREADY_LOGGED_TODAY", "message": "Already logged this habit today."}},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -91,7 +131,7 @@ def habit_history(request, habit_id):
     habit = get_object_or_404(Habit, id=habit_id, user=request.user)
     logs = HabitLog.objects.filter(habit=habit).order_by("-completed_date")
     results = [
-        {"id": log.id, "completed_date": log.completed_date, "created_at": log.created_at}
+        {"id": log.id, "action": log.action, "completed_date": log.completed_date, "created_at": log.created_at}
         for log in logs
     ]
     return Response({

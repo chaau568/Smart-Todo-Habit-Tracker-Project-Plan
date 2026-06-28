@@ -9,43 +9,70 @@ import {
   useCheckInHabit,
   useSkipHabit,
 } from "../hooks/useHabits"
+import { Pagination } from "@/components/Pagination"
+import type { PageSize } from "@/components/Pagination"
 import { HabitCard } from "./HabitCard"
 import { HabitForm } from "./HabitForm"
 import { HabitHistory } from "./HabitHistory"
-import type { Habit, HabitCreatePayload, HabitStatus, HabitUpdatePayload } from "../types/habit.types"
+import type { Habit, HabitCreatePayload, HabitUpdatePayload } from "../types/habit.types"
 
-type FilterStatus = "ALL" | HabitStatus
+type DailyFilter = "ALL" | "pending" | "checked_in" | "skipped"
 
-const FILTER_TABS: { label: string; value: FilterStatus }[] = [
-  { label: "All",         value: "ALL" },
-  { label: "Pending",     value: "PENDING" },
-  { label: "In Progress", value: "IN_PROGRESS" },
-  { label: "Succeeded",   value: "SUCCEEDED" },
-  { label: "Failed",      value: "FAILED" },
-  { label: "Skipped",     value: "SKIPPED" },
+const FILTER_TABS: { label: string; value: DailyFilter }[] = [
+  { label: "All",              value: "ALL" },
+  { label: "Pending Today",    value: "pending" },
+  { label: "Checked In Today", value: "checked_in" },
+  { label: "Skipped Today",    value: "skipped" },
 ]
 
+const FILTER_LABEL: Record<DailyFilter, string> = {
+  ALL:        "total",
+  pending:    "pending today",
+  checked_in: "checked in today",
+  skipped:    "skipped today",
+}
+
 export function HabitsContent() {
-  const [filter, setFilter] = useState<FilterStatus>("ALL")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [filter, setFilter] = useState<DailyFilter>("ALL")
+  const [ordering, setOrdering] = useState<string>("-created_at")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSize>(10)
   const [formOpen, setFormOpen] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [historyHabit, setHistoryHabit] = useState<Habit | null>(null)
 
-  const { data: habits = [], isLoading, isError, refetch } = useHabits()
+  const params = {
+    ...(filter !== "ALL" ? { dailyStatus: filter as "pending" | "checked_in" | "skipped" } : {}),
+    ordering,
+    page,
+    page_size: pageSize,
+  }
+
+  const { data, isLoading, isError, refetch } = useHabits(params)
+  const habits = data?.results ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalCount = data?.count ?? 0
+
   const { mutateAsync: createHabit } = useCreateHabit()
   const { mutateAsync: updateHabit } = useUpdateHabit(editingHabit?.id ?? 0)
   const { mutateAsync: deleteHabit, variables: deletingId } = useDeleteHabit()
   const { mutateAsync: checkIn, variables: checkingInId } = useCheckInHabit()
   const { mutateAsync: skipHabit, variables: skippingId } = useSkipHabit()
 
-  const filtered = (filter === "ALL" ? habits : habits.filter((h) => h.status === filter))
-    .slice()
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.start_date.localeCompare(b.start_date)
-        : b.start_date.localeCompare(a.start_date)
-    )
+  const handleFilterChange = (value: DailyFilter) => {
+    setFilter(value)
+    setPage(1)
+  }
+
+  const handleOrderingChange = (value: string) => {
+    setOrdering(value)
+    setPage(1)
+  }
+
+  const handlePageSizeChange = (size: PageSize) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const openCreate = () => {
     setEditingHabit(null)
@@ -98,7 +125,9 @@ export function HabitsContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2A2522]">Habits</h1>
-          <p className="text-sm text-[#9C8F87] mt-0.5">{habits.length} total</p>
+          {!isLoading && (
+            <p className="text-sm text-[#9C8F87] mt-0.5">{totalCount} {FILTER_LABEL[filter]}</p>
+          )}
         </div>
         <button
           onClick={openCreate}
@@ -110,33 +139,29 @@ export function HabitsContent() {
 
       {/* Filter tabs */}
       <div className="flex gap-1.5 flex-wrap mb-3">
-        {FILTER_TABS.map((tab) => {
-          const count = tab.value === "ALL"
-            ? habits.length
-            : habits.filter((h) => h.status === tab.value).length
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                filter === tab.value
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
-              }`}
-            >
-              {tab.label}{count > 0 && ` (${count})`}
-            </button>
-          )
-        })}
+        {FILTER_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => handleFilterChange(tab.value)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              filter === tab.value
+                ? "bg-[#16A34A] text-white"
+                : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
+            }`}
+          >
+            {tab.label}
+            {filter === tab.value && totalCount > 0 && ` (${totalCount})`}
+          </button>
+        ))}
       </div>
 
       {/* Sort controls */}
       <div className="flex items-center gap-2 mb-5">
         <span className="text-xs text-[#9C8F87]">Sort by start date:</span>
         <button
-          onClick={() => setSortOrder("asc")}
+          onClick={() => handleOrderingChange("start_date")}
           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-            sortOrder === "asc"
+            ordering === "start_date"
               ? "bg-[#16A34A] text-white"
               : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
           }`}
@@ -144,9 +169,9 @@ export function HabitsContent() {
           Oldest ↑
         </button>
         <button
-          onClick={() => setSortOrder("desc")}
+          onClick={() => handleOrderingChange("-start_date")}
           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-            sortOrder === "desc"
+            ordering === "-start_date"
               ? "bg-[#16A34A] text-white"
               : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
           }`}
@@ -158,11 +183,11 @@ export function HabitsContent() {
       {/* List */}
       {isLoading ? (
         <HabitsSkeleton />
-      ) : filtered.length === 0 ? (
+      ) : habits.length === 0 ? (
         <EmptyState filter={filter} onNew={openCreate} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((habit) => (
+          {habits.map((habit) => (
             <HabitCard
               key={habit.id}
               habit={habit}
@@ -180,6 +205,16 @@ export function HabitsContent() {
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {/* Form modal */}
       {formOpen && (
@@ -217,7 +252,7 @@ function HabitsSkeleton() {
   )
 }
 
-function EmptyState({ filter, onNew }: { filter: FilterStatus; onNew: () => void }) {
+function EmptyState({ filter, onNew }: { filter: DailyFilter; onNew: () => void }) {
   return (
     <div className="bg-white rounded-2xl border border-[#E8E0D7] p-10 flex flex-col items-center text-center">
       <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center mb-4">
@@ -226,7 +261,7 @@ function EmptyState({ filter, onNew }: { filter: FilterStatus; onNew: () => void
         </svg>
       </div>
       <p className="text-sm font-medium text-[#2A2522] mb-1">
-        {filter === "ALL" ? "No habits yet" : `No ${filter.toLowerCase().replace("_", " ")} habits`}
+        {filter === "ALL" ? "No habits yet" : `No habits ${FILTER_LABEL[filter]}`}
       </p>
       <p className="text-xs text-[#9C8F87] mb-4">
         {filter === "ALL" ? "Build your first habit today." : "Try a different filter."}

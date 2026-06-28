@@ -17,11 +17,11 @@ class HabitService:
     @transaction.atomic
     def check_in(habit: Habit) -> Habit:
         from achievements.services.achievement_service import AchievementService
-        habit.check_in()
         habit.tracking.increment_success()
         HabitLog.objects.create(
             habit=habit,
             user=habit.user,
+            action=HabitLog.Action.CHECKED_IN,
             completed_date=timezone.localdate(),
         )
         AchievementService.check_and_unlock(habit.user)
@@ -30,8 +30,13 @@ class HabitService:
     @staticmethod
     @transaction.atomic
     def skip(habit: Habit) -> Habit:
-        habit.skip()
         habit.tracking.increment_failure()
+        HabitLog.objects.create(
+            habit=habit,
+            user=habit.user,
+            action=HabitLog.Action.SKIPPED,
+            completed_date=timezone.localdate(),
+        )
         return habit
 
     @staticmethod

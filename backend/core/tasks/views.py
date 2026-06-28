@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.utils import paginate
 from tasks.models import Task
 from tasks.serializers import TaskCreateSerializer, TaskReadSerializer, TaskUpdateSerializer
 from tasks.services import TaskService
@@ -13,9 +14,21 @@ from tasks.services import TaskService
 @permission_classes([IsAuthenticated])
 def task_list(request):
     if request.method == "GET":
-        tasks = Task.objects.filter(user=request.user).exclude(status=Task.Status.DELETED).order_by("-created_at")
-        serializer = TaskReadSerializer(tasks, many=True)
-        return Response({"success": True, "data": {"results": serializer.data, "count": tasks.count()}})
+        qs = Task.objects.filter(user=request.user).exclude(status=Task.Status.DELETED)
+
+        status_filter = request.GET.get("status")
+        if status_filter and status_filter in Task.Status.values:
+            qs = qs.filter(status=status_filter)
+
+        ordering = request.GET.get("ordering", "-created_at")
+        if ordering.lstrip("-") in ("start_date", "due_date", "created_at"):
+            qs = qs.order_by(ordering)
+        else:
+            qs = qs.order_by("-created_at")
+
+        items, meta = paginate(qs, request)
+        serializer = TaskReadSerializer(items, many=True)
+        return Response({"success": True, "data": {**meta, "results": serializer.data}})
 
     serializer = TaskCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)

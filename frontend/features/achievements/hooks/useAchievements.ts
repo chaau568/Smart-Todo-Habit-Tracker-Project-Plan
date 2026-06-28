@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { achievementService } from "../services/achievement.service"
+import type { AchievementListParams } from "../services/achievement.service"
 import type { AchievementCreatePayload, AchievementUpdatePayload } from "../types/achievement.types"
 
-export function useAchievements() {
+export function useAchievements(params: AchievementListParams = {}) {
   return useQuery({
-    queryKey: queryKeys.achievements.all,
-    queryFn: achievementService.getAll,
+    queryKey: queryKeys.achievements.list(params),
+    queryFn: () => achievementService.getList(params),
   })
 }
 

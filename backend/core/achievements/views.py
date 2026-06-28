@@ -6,6 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.utils import paginate
 from achievements.models import Achievement, UserAchievement
 from achievements.serializers import AchievementSerializer, UserAchievementSerializer
 
@@ -29,11 +30,26 @@ def _require_admin(request):
 def achievement_list(request):
     if request.method == "GET":
         if request.user.role == "admin":
-            achievements = Achievement.objects.annotate(rank_order=RANK_ORDER).order_by("rank_order", "title")
+            qs = Achievement.objects.annotate(rank_order=RANK_ORDER).order_by("rank_order", "title")
         else:
-            achievements = Achievement.objects.filter(is_active=True).annotate(rank_order=RANK_ORDER).order_by("rank_order", "title")
-        serializer = AchievementSerializer(achievements, many=True)
-        return Response({"success": True, "data": {"results": serializer.data, "count": achievements.count()}})
+            qs = Achievement.objects.filter(is_active=True).annotate(rank_order=RANK_ORDER).order_by("rank_order", "title")
+
+        type_filter = request.GET.get("type")
+        if type_filter in Achievement.Type.values:
+            qs = qs.filter(type=type_filter)
+
+        items, meta = paginate(qs, request)
+        serializer = AchievementSerializer(items, many=True)
+
+        rank_totals = {
+            r: Achievement.objects.filter(rank=r, is_active=True).count()
+            for r in Achievement.Rank.values
+        }
+
+        return Response({
+            "success": True,
+            "data": {**meta, "results": serializer.data, "rank_totals": rank_totals},
+        })
 
     _require_admin(request)
 

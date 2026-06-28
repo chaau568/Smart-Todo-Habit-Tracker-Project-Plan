@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useProfile } from "@/features/settings/hooks/useSettings"
+import { Pagination } from "@/components/Pagination"
+import type { PageSize } from "@/components/Pagination"
 import {
   useAchievements,
   useMyAchievements,
@@ -17,6 +19,14 @@ import type {
   AchievementType,
   AchievementUpdatePayload,
 } from "../types/achievement.types"
+
+type TypeFilter = "all" | AchievementType
+
+const TYPE_TABS: { label: string; value: TypeFilter }[] = [
+  { label: "All",   value: "all" },
+  { label: "Task",  value: "task" },
+  { label: "Habit", value: "habit" },
+]
 
 const RANK_STYLES: Record<AchievementRank, { badge: string; border: string; icon: string }> = {
   COMMON:    { badge: "bg-gray-50 text-[#9C8F87] border border-gray-200",       border: "border-gray-200",   icon: "⬜" },
@@ -35,9 +45,6 @@ const METRIC_LABELS: Record<string, string> = {
   habit_succeeded_count: "Habit check-ins",
   habit_max_streak:      "Max streak (days)",
 }
-
-const RANK_ORDER: Record<AchievementRank, number> = { COMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3 }
-const byRank = (a: Achievement, b: Achievement) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank]
 
 function AchievementCard({
   achievement,
@@ -60,7 +67,6 @@ function AchievementCard({
 
   return (
     <div className={`bg-white rounded-xl border p-4 ${rank.border}`}>
-      {/* Inactive indicator — admin only */}
       {isAdmin && isInactive && (
         <div className="flex items-center gap-1.5 mb-2.5">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#9C8F87]" />
@@ -69,9 +75,7 @@ function AchievementCard({
       )}
 
       <div className="flex items-start gap-3">
-        {/* Content — dimmed when inactive */}
         <div className={`flex items-start gap-3 flex-1 min-w-0 transition-opacity ${isInactive ? "opacity-40" : ""}`}>
-          {/* Icon circle */}
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg ${
               unlocked ? "bg-[#F0FDF4]" : "bg-[#F9FAFB]"
@@ -110,7 +114,6 @@ function AchievementCard({
           </div>
         </div>
 
-        {/* Admin actions — always full opacity */}
         {isAdmin && (
           <div className="flex flex-col gap-1 shrink-0">
             <button
@@ -135,6 +138,9 @@ function AchievementCard({
 }
 
 export function AchievementsContent() {
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSize>(10)
   const [formOpen, setFormOpen] = useState(false)
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null)
   const [deactivateTargetId, setDeactivateTargetId] = useState<number | null>(null)
@@ -142,19 +148,39 @@ export function AchievementsContent() {
   const { data: profile } = useProfile()
   const isAdmin = profile?.role === "admin"
 
-  const { data: all = [], isLoading: loadingAll, isError } = useAchievements()
+  const listParams = {
+    ...(typeFilter !== "all" ? { type: typeFilter as AchievementType } : {}),
+    page,
+    page_size: pageSize,
+  }
+
+  const { data, isLoading: loadingAll, isError } = useAchievements(listParams)
   const { data: myList = [], isLoading: loadingMy } = useMyAchievements()
   const { mutateAsync: createAchievement } = useCreateAchievement()
   const { mutateAsync: updateAchievement } = useUpdateAchievement(editingAchievement?.id ?? 0)
   const { mutate: deactivate } = useDeactivateAchievement()
 
   const isLoading = loadingAll || loadingMy
+  const results = data?.results ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalCount = data?.count ?? 0
+  const rankTotals = data?.rank_totals
+
   const unlockedMap = new Map(myList.map((ua) => [ua.achievement.id, ua.unlocked_at]))
   const unlockedCount = myList.length
-  const activeTotal = all.filter((a) => a.is_active).length
+  const activeTotal = rankTotals
+    ? Object.values(rankTotals).reduce((a, b) => a + b, 0)
+    : 0
 
-  const taskAchievements = all.filter((a) => a.type === "task").sort(byRank)
-  const habitAchievements = all.filter((a) => a.type === "habit").sort(byRank)
+  const handleTypeFilter = (value: TypeFilter) => {
+    setTypeFilter(value)
+    setPage(1)
+  }
+
+  const handlePageSizeChange = (size: PageSize) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const openCreate = () => {
     setEditingAchievement(null)
@@ -179,10 +205,6 @@ export function AchievementsContent() {
     }
   }
 
-  const handleDeactivate = (id: number) => {
-    setDeactivateTargetId(id)
-  }
-
   const confirmDeactivate = () => {
     if (deactivateTargetId !== null) deactivate(deactivateTargetId)
     setDeactivateTargetId(null)
@@ -205,14 +227,13 @@ export function AchievementsContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2A2522]">Achievements</h1>
-          {!isLoading && (
+          {!isLoading && activeTotal > 0 && (
             <p className="text-sm text-[#9C8F87] mt-0.5">
               {unlockedCount} / {activeTotal} unlocked
             </p>
           )}
         </div>
 
-        {/* Admin-only create button */}
         {isAdmin && (
           <button
             onClick={openCreate}
@@ -250,7 +271,7 @@ export function AchievementsContent() {
           </div>
           <div className="flex gap-4 mt-3">
             {(["COMMON", "RARE", "EPIC", "LEGENDARY"] as AchievementRank[]).map((r) => {
-              const total = all.filter((a) => a.rank === r && a.is_active).length
+              const total = rankTotals?.[r] ?? 0
               const done = myList.filter((ua) => ua.achievement.rank === r).length
               if (total === 0) return null
               return (
@@ -264,18 +285,38 @@ export function AchievementsContent() {
         </div>
       )}
 
-      {/* Sections */}
+      {/* Type filter tabs */}
+      <div className="flex gap-1.5 mb-5">
+        {TYPE_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => handleTypeFilter(tab.value)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              typeFilter === tab.value
+                ? "bg-[#16A34A] text-white"
+                : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
+            }`}
+          >
+            {tab.label}
+            {typeFilter === tab.value && totalCount > 0 && ` (${totalCount})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Achievement grid */}
       {isLoading ? (
         <AchievementsSkeleton />
-      ) : all.length === 0 ? (
+      ) : results.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E8E0D7] p-10 flex flex-col items-center text-center">
-          <p className="text-sm font-medium text-[#2A2522] mb-1">No achievements available yet</p>
+          <p className="text-sm font-medium text-[#2A2522] mb-1">
+            {typeFilter === "all" ? "No achievements available yet" : `No ${typeFilter} achievements`}
+          </p>
           <p className="text-xs text-[#9C8F87] mb-4">
             {isAdmin
               ? "Create the first achievement using the button above."
               : "Check back later — achievements are added by admins."}
           </p>
-          {isAdmin && (
+          {isAdmin && typeFilter === "all" && (
             <button
               onClick={openCreate}
               className="text-sm text-[#16A34A] font-medium hover:text-[#15803D] transition-colors"
@@ -285,29 +326,30 @@ export function AchievementsContent() {
           )}
         </div>
       ) : (
-        <div className="space-y-8">
-          {taskAchievements.length > 0 && (
-            <AchievementSection
-              title="Task Achievements"
-              achievements={taskAchievements}
-              unlockedMap={unlockedMap}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {results.map((a) => (
+            <AchievementCard
+              key={a.id}
+              achievement={a}
+              unlocked={unlockedMap.has(a.id)}
+              unlockedAt={unlockedMap.get(a.id)}
               isAdmin={isAdmin}
               onEdit={openEdit}
-              onDeactivate={handleDeactivate}
+              onDeactivate={setDeactivateTargetId}
             />
-          )}
-          {habitAchievements.length > 0 && (
-            <AchievementSection
-              title="Habit Achievements"
-              achievements={habitAchievements}
-              unlockedMap={unlockedMap}
-              isAdmin={isAdmin}
-              onEdit={openEdit}
-              onDeactivate={handleDeactivate}
-            />
-          )}
+          ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {formOpen && (
         <AchievementForm
@@ -323,49 +365,6 @@ export function AchievementsContent() {
           onCancel={() => setDeactivateTargetId(null)}
         />
       )}
-    </div>
-  )
-}
-
-function AchievementSection({
-  title,
-  achievements,
-  unlockedMap,
-  isAdmin,
-  onEdit,
-  onDeactivate,
-}: {
-  title: string
-  achievements: Achievement[]
-  unlockedMap: Map<number, string>
-  isAdmin: boolean
-  onEdit: (a: Achievement) => void
-  onDeactivate: (id: number) => void
-}) {
-  const unlockedCount = achievements.filter((a) => unlockedMap.has(a.id)).length
-  const activeTotal = achievements.filter((a) => a.is_active).length
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-semibold text-[#2A2522]">{title}</h2>
-        <span className="text-xs text-[#9C8F87] bg-[#F0FDF4] border border-[#E8E0D7] px-2 py-0.5 rounded-full">
-          {unlockedCount}/{activeTotal}
-        </span>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {achievements.map((a) => (
-          <AchievementCard
-            key={a.id}
-            achievement={a}
-            unlocked={unlockedMap.has(a.id)}
-            unlockedAt={unlockedMap.get(a.id)}
-            isAdmin={isAdmin}
-            onEdit={onEdit}
-            onDeactivate={onDeactivate}
-          />
-        ))}
-      </div>
     </div>
   )
 }

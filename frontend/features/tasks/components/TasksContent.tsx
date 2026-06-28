@@ -10,6 +10,8 @@ import {
   useCancelTask,
   useMarkTaskInProgress,
 } from "../hooks/useTasks"
+import { Pagination } from "@/components/Pagination"
+import type { PageSize } from "@/components/Pagination"
 import { TaskCard } from "./TaskCard"
 import { TaskForm } from "./TaskForm"
 import type { Task, TaskCreatePayload, TaskStatus, TaskUpdatePayload } from "../types/task.types"
@@ -27,11 +29,24 @@ const FILTER_TABS: { label: string; value: FilterStatus }[] = [
 
 export function TasksContent() {
   const [filter, setFilter] = useState<FilterStatus>("ALL")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [ordering, setOrdering] = useState<string>("-created_at")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSize>(10)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  const { data: tasks = [], isLoading, isError, refetch } = useTasks()
+  const params = {
+    ...(filter !== "ALL" ? { status: filter as TaskStatus } : {}),
+    ordering,
+    page,
+    page_size: pageSize,
+  }
+
+  const { data, isLoading, isError, refetch } = useTasks(params)
+  const tasks = data?.results ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalCount = data?.count ?? 0
+
   const { mutateAsync: createTask } = useCreateTask()
   const { mutateAsync: updateTask } = useUpdateTask(editingTask?.id ?? 0)
   const { mutateAsync: deleteTask, variables: deletingId } = useDeleteTask()
@@ -39,13 +54,20 @@ export function TasksContent() {
   const { mutateAsync: cancelTask, variables: cancelingId } = useCancelTask()
   const { mutateAsync: markInProgress, variables: progressingId } = useMarkTaskInProgress()
 
-  const filtered = (filter === "ALL" ? tasks : tasks.filter((t) => t.status === filter))
-    .slice()
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.start_date.localeCompare(b.start_date)
-        : b.start_date.localeCompare(a.start_date)
-    )
+  const handleFilterChange = (value: FilterStatus) => {
+    setFilter(value)
+    setPage(1)
+  }
+
+  const handleOrderingChange = (value: string) => {
+    setOrdering(value)
+    setPage(1)
+  }
+
+  const handlePageSizeChange = (size: PageSize) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const openCreate = () => {
     setEditingTask(null)
@@ -98,7 +120,9 @@ export function TasksContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2A2522]">Tasks</h1>
-          <p className="text-sm text-[#9C8F87] mt-0.5">{tasks.length} total</p>
+          {!isLoading && (
+            <p className="text-sm text-[#9C8F87] mt-0.5">{totalCount} {filter !== "ALL" ? filter.toLowerCase().replace("_", " ") : "total"}</p>
+          )}
         </div>
         <button
           onClick={openCreate}
@@ -110,33 +134,29 @@ export function TasksContent() {
 
       {/* Filter tabs */}
       <div className="flex gap-1.5 flex-wrap mb-3">
-        {FILTER_TABS.map((tab) => {
-          const count = tab.value === "ALL"
-            ? tasks.length
-            : tasks.filter((t) => t.status === tab.value).length
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                filter === tab.value
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
-              }`}
-            >
-              {tab.label}{count > 0 && ` (${count})`}
-            </button>
-          )
-        })}
+        {FILTER_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => handleFilterChange(tab.value)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              filter === tab.value
+                ? "bg-[#16A34A] text-white"
+                : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
+            }`}
+          >
+            {tab.label}
+            {filter === tab.value && totalCount > 0 && ` (${totalCount})`}
+          </button>
+        ))}
       </div>
 
       {/* Sort controls */}
       <div className="flex items-center gap-2 mb-5">
         <span className="text-xs text-[#9C8F87]">Sort by start date:</span>
         <button
-          onClick={() => setSortOrder("asc")}
+          onClick={() => handleOrderingChange("start_date")}
           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-            sortOrder === "asc"
+            ordering === "start_date"
               ? "bg-[#16A34A] text-white"
               : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
           }`}
@@ -144,9 +164,9 @@ export function TasksContent() {
           Oldest ↑
         </button>
         <button
-          onClick={() => setSortOrder("desc")}
+          onClick={() => handleOrderingChange("-start_date")}
           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-            sortOrder === "desc"
+            ordering === "-start_date"
               ? "bg-[#16A34A] text-white"
               : "bg-white border border-[#E8E0D7] text-[#9C8F87] hover:text-[#2A2522] hover:bg-[#F0FDF4]"
           }`}
@@ -158,11 +178,11 @@ export function TasksContent() {
       {/* List */}
       {isLoading ? (
         <TasksSkeleton />
-      ) : filtered.length === 0 ? (
+      ) : tasks.length === 0 ? (
         <EmptyState filter={filter} onNew={openCreate} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((task) => (
+          {tasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -181,6 +201,16 @@ export function TasksContent() {
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {/* Form modal */}
       {formOpen && (

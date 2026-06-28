@@ -1,11 +1,24 @@
 import { apiClient } from "@/services/api.client"
-import type { ApiSuccess, ListResponse } from "@/types/api.types"
+import type { ApiSuccess, ListResponse, PaginatedResponse } from "@/types/api.types"
 import type { Challenge, ChallengeCreatePayload, ChallengeParticipant } from "../types/challenge.types"
+
+export interface ChallengeListParams {
+  page?: number
+  page_size?: number
+}
 
 export const challengeService = {
   getAll: async (): Promise<Challenge[]> => {
     const { data } = await apiClient.get<ApiSuccess<ListResponse<Challenge>>>("/challenge/")
     return data.data.results
+  },
+
+  getList: async (params: ChallengeListParams): Promise<PaginatedResponse<Challenge>> => {
+    const query: Record<string, number> = {}
+    if (params.page) query.page = params.page
+    if (params.page_size) query.page_size = params.page_size
+    const { data } = await apiClient.get<ApiSuccess<PaginatedResponse<Challenge>>>("/challenge/", { params: query })
+    return data.data
   },
 
   create: async (payload: ChallengeCreatePayload): Promise<Challenge> => {

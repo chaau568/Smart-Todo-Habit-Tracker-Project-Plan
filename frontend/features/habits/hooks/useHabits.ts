@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { habitService } from "../services/habit.service"
+import type { HabitListParams } from "../services/habit.service"
 import type { HabitCreatePayload, HabitUpdatePayload } from "../types/habit.types"
 
-export function useHabits() {
+export function useHabits(params: HabitListParams = {}) {
   return useQuery({
-    queryKey: queryKeys.habits.all,
-    queryFn: habitService.getAll,
+    queryKey: queryKeys.habits.list(params),
+    queryFn: () => habitService.getList(params),
   })
 }
 

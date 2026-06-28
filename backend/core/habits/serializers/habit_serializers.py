@@ -1,7 +1,8 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from categories.models import Category
-from habits.models import Habit
+from habits.models import Habit, HabitLog
 
 
 class CategoryInlineSerializer(serializers.ModelSerializer):
@@ -52,11 +53,6 @@ class HabitUpdateSerializer(serializers.ModelSerializer):
         if request:
             self.fields["category"].queryset = Category.objects.filter(user=request.user)
 
-    def validate_note(self, value):
-        if value and self.instance and self.instance.status != Habit.Status.SUCCEEDED:
-            raise serializers.ValidationError("Note can only be added after habit is checked in (SUCCEEDED).")
-        return value
-
     def validate(self, attrs):
         start = attrs.get("start_date", self.instance.start_date if self.instance else None)
         end = attrs.get("end_date", self.instance.end_date if self.instance else None)
@@ -67,6 +63,8 @@ class HabitUpdateSerializer(serializers.ModelSerializer):
 
 class HabitReadSerializer(serializers.ModelSerializer):
     category = CategoryInlineSerializer(read_only=True)
+    checked_in_today = serializers.SerializerMethodField()
+    skipped_today = serializers.SerializerMethodField()
 
     class Meta:
         model = Habit
@@ -74,4 +72,19 @@ class HabitReadSerializer(serializers.ModelSerializer):
             "id", "title", "description", "category",
             "start_date", "end_date", "time_periods",
             "status", "note", "created_at", "updated_at",
+            "checked_in_today", "skipped_today",
         ]
+
+    def get_checked_in_today(self, obj):
+        if hasattr(obj, "checked_in_today"):
+            return obj.checked_in_today
+        return HabitLog.objects.filter(
+            habit=obj, completed_date=timezone.localdate(), action=HabitLog.Action.CHECKED_IN
+        ).exists()
+
+    def get_skipped_today(self, obj):
+        if hasattr(obj, "skipped_today"):
+            return obj.skipped_today
+        return HabitLog.objects.filter(
+            habit=obj, completed_date=timezone.localdate(), action=HabitLog.Action.SKIPPED
+        ).exists()

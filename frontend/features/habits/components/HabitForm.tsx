@@ -29,7 +29,7 @@ export function HabitForm({ habit, onSave, onClose }: HabitFormProps) {
   const [generalError, setGeneralError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  const canEditNote = isEdit && habit.status === "SUCCEEDED"
+  const canEditNote = isEdit && habit.checked_in_today
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {

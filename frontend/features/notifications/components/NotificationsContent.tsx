@@ -1,11 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import {
   useNotifications,
   useMarkRead,
   useMarkAllRead,
   useDeleteNotification,
 } from "../hooks/useNotifications"
+import { Pagination } from "@/components/Pagination"
+import type { PageSize } from "@/components/Pagination"
 import type { Notification, NotificationType } from "../types/notification.types"
 
 const TYPE_CONFIG: Record<NotificationType, { label: string; color: string; dot: string }> = {
@@ -85,12 +88,26 @@ function NotificationRow({
 }
 
 export function NotificationsContent() {
-  const { data: notifications = [], isLoading, isError, refetch } = useNotifications()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSize>(10)
+
+  const params = { page, pageSize }
+
+  const { data, isLoading, isError, refetch } = useNotifications(params)
+  const notifications = data?.results ?? []
+  const totalPages = data?.total_pages ?? 1
+  const totalCount = data?.count ?? 0
+
   const { mutate: markRead } = useMarkRead()
   const { mutate: markAllRead, isPending: markingAll } = useMarkAllRead()
   const { mutate: deleteNotif } = useDeleteNotification()
 
   const unreadCount = notifications.filter((n) => !n.is_read).length
+
+  const handlePageSizeChange = (size: PageSize) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   if (isError) {
     return (
@@ -117,7 +134,7 @@ export function NotificationsContent() {
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2A2522]">Notifications</h1>
           {!isLoading && (
             <p className="text-sm text-[#9C8F87] mt-0.5">
-              {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+              {unreadCount > 0 ? `${unreadCount} unread on this page` : totalCount > 0 ? `${totalCount} total` : "All caught up"}
             </p>
           )}
         </div>
@@ -155,6 +172,16 @@ export function NotificationsContent() {
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   )
 }

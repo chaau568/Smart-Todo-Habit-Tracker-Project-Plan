@@ -1,10 +1,4 @@
-export type HabitStatus =
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "SUCCEEDED"
-  | "FAILED"
-  | "SKIPPED"
-  | "DELETED"
+export type HabitStatus = "ACTIVE" | "DELETED"
 
 export interface HabitCategory {
   id: number
@@ -21,12 +15,15 @@ export interface Habit {
   end_date: string | null
   time_periods: number
   note: string | null
+  checked_in_today: boolean
+  skipped_today: boolean
   created_at: string
   updated_at: string
 }
 
 export interface HabitLog {
   id: number
+  action: "CHECKED_IN" | "SKIPPED"
   completed_date: string
   created_at: string
 }

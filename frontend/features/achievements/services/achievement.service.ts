@@ -1,11 +1,37 @@
 import { apiClient } from "@/services/api.client"
-import type { ApiSuccess, ListResponse } from "@/types/api.types"
-import type { Achievement, AchievementCreatePayload, AchievementUpdatePayload, UserAchievement } from "../types/achievement.types"
+import type { ApiSuccess, ListResponse, PaginatedResponse } from "@/types/api.types"
+import type {
+  Achievement,
+  AchievementCreatePayload,
+  AchievementRank,
+  AchievementType,
+  AchievementUpdatePayload,
+  UserAchievement,
+} from "../types/achievement.types"
+
+export interface AchievementListParams {
+  type?: AchievementType
+  page?: number
+  page_size?: number
+}
+
+export interface AchievementListResponse extends PaginatedResponse<Achievement> {
+  rank_totals: Record<AchievementRank, number>
+}
 
 export const achievementService = {
   getAll: async (): Promise<Achievement[]> => {
     const { data } = await apiClient.get<ApiSuccess<ListResponse<Achievement>>>("/achievement/")
     return data.data.results
+  },
+
+  getList: async (params: AchievementListParams): Promise<AchievementListResponse> => {
+    const query: Record<string, string | number> = {}
+    if (params.type) query.type = params.type
+    if (params.page) query.page = params.page
+    if (params.page_size) query.page_size = params.page_size
+    const { data } = await apiClient.get<ApiSuccess<AchievementListResponse>>("/achievement/", { params: query })
+    return data.data
   },
 
   getMy: async (): Promise<UserAchievement[]> => {
